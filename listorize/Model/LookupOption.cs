@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+namespace listorize.Model;
 
 public class LookupOption {
     public int Id { get; set; }

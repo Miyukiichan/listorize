@@ -1,7 +1,78 @@
 ﻿@page "/"
+@using Microsoft.EntityFrameworkCore
+@using Model
 @inject ListorizeContext db
+@inject IDialogService dialogs
+@inject ISnackbar snackbar
 
 <PageTitle>Home</PageTitle>
+<MudPaper Elevation="25">
+    <MudToolBar>
+        <MudIconButton Icon="@Icons.Material.Outlined.Add" OnClick="Add" />
+    </MudToolBar>
+</MudPaper>
+<MudDataGrid T="Model.List" @ref="Grid" Items="Items" ReadOnly="false" EditMode="DataGridEditMode.Cell" CommittedItemChanges="@CommittedItemChanges">
+    <Columns>
+        <PropertyColumn Property="x => x.Name"></PropertyColumn>
+        <TemplateColumn Editable="false">
+            <CellTemplate>
+                <MudIconButton Icon="@Icons.Material.Outlined.Delete" OnClick="() => Delete(context.Item)"></MudIconButton>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid> 
 
 @code {
-}
+    List<Model.List> Items = new();
+
+    MudDataGrid<Model.List>? Grid;
+    
+    async Task Init() {
+        Items = await db.List.ToListAsync();
+    }
+    protected override async Task OnInitializedAsync() {
+        await Init();
+        await base.OnInitializedAsync();
+    }
+    async Task Add() {
+        if (Grid is null) return;
+        await Grid.SetEditingItemAsync(new Model.List());
+    }
+    async Task CommittedItemChanges(Model.List item)
+    {
+        string error = "Failed to add item";
+        string success = "New item created";
+        var state = db.Entry(item).State;
+        // Checks for added items taht are detached
+        // When the item is updated to include the Id after it is added, it triggers the commit event again
+        // Results in an item that gets added twice and a subsequent error
+        if (state != EntityState.Modified && item.Id != 0) return;
+        if (item.Id != 0) {
+            db.List.Update(item);
+            error = "Failed to update item";
+            success = "Item updated";
+        }
+        else {
+            db.List.Add(item);
+        }
+        var changes = db.SaveChanges();
+        if (changes < 1) {
+            await dialogs.ShowMessageBox("Error", error);
+        }
+        else {
+            snackbar.Add(success, Severity.Success);
+        }
+        await Init();
+    }
+    async Task Delete(Model.List item) {
+        db.List.Remove(item);
+        var changes = db.SaveChanges();
+        if (changes < 1) {
+            await dialogs.ShowMessageBox("Error", "Failed to delete item");
+        }
+        else {
+            snackbar.Add("Item deleted", Severity.Success);
+        }
+        await Init();
+    }
+}    

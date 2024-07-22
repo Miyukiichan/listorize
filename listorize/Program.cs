@@ -1,6 +1,7 @@
 using MudBlazor.Services;
 using listorize.Components;
 using MudBlazor;
+using listorize.Model;
 
 var builder = WebApplication.CreateBuilder(args);
 

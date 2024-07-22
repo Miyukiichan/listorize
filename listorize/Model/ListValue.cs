@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+namespace listorize.Model;
 
 [PrimaryKey(nameof(ListValue.ListItemId), nameof(ListValue.ListColumnId))]
 public class ListValue {

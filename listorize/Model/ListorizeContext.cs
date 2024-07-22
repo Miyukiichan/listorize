@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+namespace listorize.Model;
 
 public class ListorizeContext : DbContext {
     IConfiguration _config;
