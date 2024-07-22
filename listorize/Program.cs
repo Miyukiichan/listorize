@@ -1,9 +1,16 @@
 using MudBlazor.Services;
 using listorize.Components;
+using MudBlazor;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddMudServices();
+builder.Services.AddMudServices(config => {
+    config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
+    config.SnackbarConfiguration.VisibleStateDuration = 1000;
+    config.SnackbarConfiguration.HideTransitionDuration = 200;
+    config.SnackbarConfiguration.ShowTransitionDuration = 200;
+    config.SnackbarConfiguration.PreventDuplicates = false;
+});
 
 var configPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 configPath = Path.Combine(configPath, "listorize");

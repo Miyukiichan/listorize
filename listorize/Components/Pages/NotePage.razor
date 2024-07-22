@@ -1,0 +1,54 @@
+@page "/note/{id:int}"
+@inject ListorizeContext db
+@inject IJSRuntime js
+@inject IDialogService dialogs
+@inject ISnackbar snackbar
+
+<PageTitle>Note</PageTitle>
+
+@if (Note is null) {
+    <h1>Note not found</h1>
+}
+else {
+    <MudButton Variant="Variant.Filled" OnClick="Submit">Save</MudButton>
+    <br />
+    <br />
+    <div>
+        <textarea id="editor" readonly>@Value</textarea>
+    </div>
+}
+
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Note? Note { get; set; }
+    string Value { get; set; } = "";
+    protected override async Task OnInitializedAsync() {
+        Note = await db.Note.FindAsync(Id);
+        if (Note is not null) {
+            Value = Note.Body;
+            StateHasChanged();
+        }
+        await base.OnInitializedAsync();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        // Need to re-render every time otherwise the textarea does not become a MD editor
+        if (Note is not null) {
+            await js.InvokeVoidAsync("initMarkdown");
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    async Task Submit() {
+        if (Note is null) return;
+        //Can't bind this to the textarea control so need to get the value explicitly
+        Note.Body = await js.InvokeAsync<string>("markdownValue");
+        db.Note.Update(Note);
+        var changes = db.SaveChanges();
+        if (changes < 1) {
+            await dialogs.ShowMessageBox("Error", "Failed to save changes");
+        }
+        else {
+            snackbar.Add("Note updated", Severity.Success);
+        }
+    }
+}

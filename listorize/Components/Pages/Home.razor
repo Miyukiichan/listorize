@@ -1,33 +1,7 @@
 ﻿@page "/"
-@inject IJSRuntime JSRuntime
-@inject NavigationManager NavigationManager
 @inject ListorizeContext db
 
 <PageTitle>Home</PageTitle>
 
-<h1>@Value</h1>
-<br />
-
-<MudButton Variant="Variant.Filled" OnClick="Submit">Save</MudButton>
-<br />
-<br />
-<div>
-    <textarea id="editor" readonly>@Value</textarea>
-</div>
-
 @code {
-    string Value = "test";
-    protected override async Task OnAfterRenderAsync(bool firstRender) {
-        await JSRuntime.InvokeVoidAsync("initMarkdown");
-        await base.OnAfterRenderAsync(firstRender);
-    }
-    async Task Submit() {
-        Value = await JSRuntime.InvokeAsync<string>("markdownValue");
-        var note = new Note {
-            Name = "Test",
-            Body = Value,
-        };
-        db.Note.Add(note);
-        db.SaveChanges();
-    }
 }
