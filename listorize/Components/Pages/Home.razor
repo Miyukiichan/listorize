@@ -1,6 +1,7 @@
 ﻿@page "/"
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
+@inject ListorizeContext db
 
 <PageTitle>Home</PageTitle>
 
@@ -22,5 +23,11 @@
     }
     async Task Submit() {
         Value = await JSRuntime.InvokeAsync<string>("markdownValue");
+        var note = new Note {
+            Name = "Test",
+            Body = Value,
+        };
+        db.Note.Add(note);
+        db.SaveChanges();
     }
 }

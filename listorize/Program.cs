@@ -3,8 +3,27 @@ using listorize.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add MudBlazor services
 builder.Services.AddMudServices();
+
+var configPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+configPath = Path.Combine(configPath, "listorize");
+if (!Directory.Exists(configPath)) {
+    Directory.CreateDirectory(configPath);
+}
+configPath = Path.Combine(configPath, "config.json");
+if (!File.Exists(configPath)) {
+    try {
+        var sourceConfig = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+        File.Copy(sourceConfig, configPath);
+    }
+    catch {}
+}
+
+builder.Configuration.AddJsonFile(configPath    ,
+        optional: true,
+        reloadOnChange: true);
+
+builder.Services.AddDbContext<ListorizeContext>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
