@@ -13,13 +13,13 @@ public enum ColumnType {
     LastEditedDateTime,
     Checkbox,
 }
-public class ListColumn : BaseModel {
+public class ItemColumn : BaseModel {
     public required string Name { get; set; }
     public ColumnType ColumnType { get; set; }
-    [ForeignKey(nameof(ListColumn.List))]
-    public int ListId { get; set; }
-    [ForeignKey(nameof(ListColumn.Lookup))]
+    [ForeignKey(nameof(ItemColumn.Item))]
+    public int ItemId { get; set; }
+    [ForeignKey(nameof(ItemColumn.Lookup))]
     public int? LookupId { get; set; }
-    public required List List { get; set; }
+    public required Item Item { get; set; }
     public Lookup? Lookup { get; set; }
 }

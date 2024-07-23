@@ -11,8 +11,8 @@ using listorize.Model;
 namespace listorize.Migrations
 {
     [DbContext(typeof(ListorizeContext))]
-    [Migration("20240723122804_ListItemNullableList")]
-    partial class ListItemNullableList
+    [Migration("20240723182345_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -20,22 +20,37 @@ namespace listorize.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.7");
 
-            modelBuilder.Entity("listorize.Model.List", b =>
+            modelBuilder.Entity("listorize.Model.Item", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ChildItemId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("NoteId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ParentItemId")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
-                    b.ToTable("List");
+                    b.HasIndex("ChildItemId");
+
+                    b.HasIndex("NoteId");
+
+                    b.HasIndex("ParentItemId");
+
+                    b.ToTable("Items");
                 });
 
-            modelBuilder.Entity("listorize.Model.ListColumn", b =>
+            modelBuilder.Entity("listorize.Model.ItemColumn", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -44,7 +59,7 @@ namespace listorize.Migrations
                     b.Property<int>("ColumnType")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("ListId")
+                    b.Property<int>("ItemId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int?>("LookupId")
@@ -56,54 +71,30 @@ namespace listorize.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ListId");
+                    b.HasIndex("ItemId");
 
                     b.HasIndex("LookupId");
 
-                    b.ToTable("ListColumn");
+                    b.ToTable("ItemColumns");
                 });
 
-            modelBuilder.Entity("listorize.Model.ListItem", b =>
+            modelBuilder.Entity("listorize.Model.ItemValue", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<int>("ItemId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("ListId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("NoteId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ParentListId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ListId");
-
-                    b.HasIndex("NoteId");
-
-                    b.ToTable("ListItem");
-                });
-
-            modelBuilder.Entity("listorize.Model.ListValue", b =>
-                {
-                    b.Property<int>("ListItemId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ListColumnId")
+                    b.Property<int>("ItemColumnId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.HasKey("ListItemId", "ListColumnId");
+                    b.HasKey("ItemId", "ItemColumnId");
 
-                    b.HasIndex("ListColumnId");
+                    b.HasIndex("ItemColumnId");
 
-                    b.ToTable("ListValue");
+                    b.ToTable("ItemValues");
                 });
 
             modelBuilder.Entity("listorize.Model.Lookup", b =>
@@ -118,7 +109,7 @@ namespace listorize.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Lookup");
+                    b.ToTable("Lookups");
                 });
 
             modelBuilder.Entity("listorize.Model.LookupOption", b =>
@@ -138,7 +129,7 @@ namespace listorize.Migrations
 
                     b.HasIndex("LookupId");
 
-                    b.ToTable("LookupOption");
+                    b.ToTable("LookupOptions");
                 });
 
             modelBuilder.Entity("listorize.Model.Note", b =>
@@ -151,20 +142,37 @@ namespace listorize.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.HasKey("Id");
 
-                    b.ToTable("Note");
+                    b.ToTable("Notes");
                 });
 
-            modelBuilder.Entity("listorize.Model.ListColumn", b =>
+            modelBuilder.Entity("listorize.Model.Item", b =>
                 {
-                    b.HasOne("listorize.Model.List", "List")
+                    b.HasOne("listorize.Model.Item", "ChildItem")
                         .WithMany()
-                        .HasForeignKey("ListId")
+                        .HasForeignKey("ChildItemId");
+
+                    b.HasOne("listorize.Model.Note", "Note")
+                        .WithMany()
+                        .HasForeignKey("NoteId");
+
+                    b.HasOne("listorize.Model.Item", "ParentItem")
+                        .WithMany()
+                        .HasForeignKey("ParentItemId");
+
+                    b.Navigation("ChildItem");
+
+                    b.Navigation("Note");
+
+                    b.Navigation("ParentItem");
+                });
+
+            modelBuilder.Entity("listorize.Model.ItemColumn", b =>
+                {
+                    b.HasOne("listorize.Model.Item", "Item")
+                        .WithMany()
+                        .HasForeignKey("ItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -172,43 +180,28 @@ namespace listorize.Migrations
                         .WithMany()
                         .HasForeignKey("LookupId");
 
-                    b.Navigation("List");
+                    b.Navigation("Item");
 
                     b.Navigation("Lookup");
                 });
 
-            modelBuilder.Entity("listorize.Model.ListItem", b =>
+            modelBuilder.Entity("listorize.Model.ItemValue", b =>
                 {
-                    b.HasOne("listorize.Model.List", "List")
+                    b.HasOne("listorize.Model.ItemColumn", "ItemColumn")
                         .WithMany()
-                        .HasForeignKey("ListId");
-
-                    b.HasOne("listorize.Model.Note", "Note")
-                        .WithMany()
-                        .HasForeignKey("NoteId");
-
-                    b.Navigation("List");
-
-                    b.Navigation("Note");
-                });
-
-            modelBuilder.Entity("listorize.Model.ListValue", b =>
-                {
-                    b.HasOne("listorize.Model.ListColumn", "ListColumn")
-                        .WithMany()
-                        .HasForeignKey("ListColumnId")
+                        .HasForeignKey("ItemColumnId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("listorize.Model.ListItem", "ListItem")
+                    b.HasOne("listorize.Model.Item", "Item")
                         .WithMany()
-                        .HasForeignKey("ListItemId")
+                        .HasForeignKey("ItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("ListColumn");
+                    b.Navigation("Item");
 
-                    b.Navigation("ListItem");
+                    b.Navigation("ItemColumn");
                 });
 
             modelBuilder.Entity("listorize.Model.LookupOption", b =>

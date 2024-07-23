@@ -13,9 +13,9 @@
 <h1>@Title</h1>
 <br />
 
-<Grid @ref="grid" T="Model.ListItem" NavigationURI="list" OnOpen="OnOpen" GetData="GetData">
+<Grid @ref="grid" T="Item" NavigationURI="list" OnOpen="OnOpen" GetData="GetData">
     <ChildContent>
-        <PropertyColumn T="Model.ListItem" TProperty="string" Property="x => x.Name" Editable="false" Required="false"></PropertyColumn>
+        <PropertyColumn T="Item" TProperty="string" Property="x => x.Name"></PropertyColumn>
     </ChildContent>
     <Toolbar>
         <MudStack Row>
@@ -43,34 +43,30 @@
     MudMessageBox? NewNoteMsg;
     string NewListName = "";
     MudMessageBox? NewListMsg;
-    Grid<ListItem>? grid;
-    ListItem? ListItem;
+    Grid<Item>? grid;
+    Item? Item;
     string Title = "Home";
     protected override async Task OnInitializedAsync() {
         if (Id is not null) {
-            ListItem = db.ListItem.Include(x => x.List).FirstOrDefault(x => x.Id == Id);
-            if (ListItem is not null) {
-                Title = $"List - {ListItem.Name}";
+            Item = db.Items.FirstOrDefault(x => x.Id == Id);
+            if (Item is not null) {
+                Title = $"List - {Item.Name}";
             }
         }
         await base.OnInitializedAsync();
     }
-    async Task OnOpen(ListItem item) {
-        if (item.ListId is not null) {
-            navManager.NavigateTo($"/list/{item.ListId}", true);
-        }
-        else if (item.NoteId is not null) {
-            navManager.NavigateTo($"/note/{item.NoteId}");
+    async Task OnOpen(Item item) {
+        if (item.NoteId is not null) {
+            navManager.NavigateTo($"/note/{item.Id}");
         }
         else {
-            await dialogs.ShowMessageBox("Error", "Nothing to open");
+            navManager.NavigateTo($"/list/{item.Id}", true);
         }
     }
-    async Task<List<ListItem>> GetData() {
-        return db.ListItem
-            .Include(x => x.List)
+    async Task<List<Item>> GetData() {
+        return db.Items
             .Include(x => x.Note)
-            .Where(x => x.ParentListId == Id)
+            .Where(x => x.ParentItemId == Id)
             .ToList();
     }
     async Task AddNote() {
@@ -82,14 +78,14 @@
             return;
         }
         var note = new Note {
-            Name = NewNoteName,
             Body = "",
         };
-        var listItem = new ListItem {
-            ParentListId = Id,
+        var item = new Item {
+            Name = NewNoteName,
+            ParentItemId = Id,
             Note = note,
         };
-        db.ListItem.Add(listItem);
+        db.Items.Add(item);
         var changes = db.SaveChanges();
         if (changes < 1) {
             await dialogs.ShowMessageBox("Error", "Failed to create note");
@@ -97,7 +93,7 @@
         else {
             snackbar.Add("Note created", Severity.Success);
         }
-        await grid.Init();
+        await OnOpen(item);
     }
     async Task AddList() {
         NewListName = "";
@@ -107,14 +103,11 @@
             snackbar.Add("Cancelled list creation");
             return;
         }
-        var list = new List {
+        var item = new Item {
             Name = NewListName,
+            ParentItemId = Id,
         };
-        var listItem = new ListItem {
-            ParentListId = Id,
-            List = list,
-        };
-        db.ListItem.Add(listItem);
+        db.Items.Add(item);
         var changes = db.SaveChanges();
         if (changes < 1) {
             await dialogs.ShowMessageBox("Error", "Failed to create list");
@@ -122,6 +115,6 @@
         else {
             snackbar.Add("List created", Severity.Success);
         }
-        await grid.Init();
+        await OnOpen(item);
     }
 }
