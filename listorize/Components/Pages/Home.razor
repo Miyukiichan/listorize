@@ -1,17 +1,127 @@
-﻿@page "/"
+@page "/"
+@page "/list/{id:int}"
+@using listorize.Components.Util
 @using Microsoft.EntityFrameworkCore
 @using Model
-@using listorize.Components.Util;
-@inject ListorizeContext db
-@inject IDialogService dialogs
-@inject ISnackbar snackbar
 @inject NavigationManager navManager
+@inject IDialogService dialogs
+@inject ListorizeContext db
+@inject ISnackbar snackbar
 
-<PageTitle>Home</PageTitle>
+<PageTitle>@Title</PageTitle>
 
-<Grid T="Model.List" NavigationURI="list">
-    <PropertyColumn T="Model.List" TProperty="string" Property="x => x.Name"></PropertyColumn>
+<h1>@Title</h1>
+<br />
+
+<Grid @ref="grid" T="Model.ListItem" NavigationURI="list" OnOpen="OnOpen" GetData="GetData">
+    <ChildContent>
+        <PropertyColumn T="Model.ListItem" TProperty="string" Property="x => x.Name" Editable="false" Required="false"></PropertyColumn>
+    </ChildContent>
+    <Toolbar>
+        <MudStack Row>
+            <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Outlined.Add" OnClick="AddNote">Note</MudButton>
+            <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Outlined.Add" OnClick="AddList">List</MudButton>
+        </MudStack>
+    </Toolbar>
 </Grid>
 
+<MudMessageBox @ref="NewNoteMsg" Title="New Note">
+    <MessageContent>
+        <MudTextField @bind-Value="NewNoteName" Label="Name" Required="true"></MudTextField>
+    </MessageContent>
+</MudMessageBox>
+
+<MudMessageBox @ref="NewListMsg" Title="New List">
+    <MessageContent>
+        <MudTextField @bind-Value="NewListName" Label="Name" Required="true"></MudTextField>
+    </MessageContent>
+</MudMessageBox>
+
 @code {
-}    
+    [Parameter] public int? Id { get; set; }
+    string NewNoteName = "";
+    MudMessageBox? NewNoteMsg;
+    string NewListName = "";
+    MudMessageBox? NewListMsg;
+    Grid<ListItem>? grid;
+    ListItem? ListItem;
+    string Title = "Home";
+    protected override async Task OnInitializedAsync() {
+        if (Id is not null) {
+            ListItem = db.ListItem.Include(x => x.List).FirstOrDefault(x => x.Id == Id);
+            if (ListItem is not null) {
+                Title = $"List - {ListItem.Name}";
+            }
+        }
+        await base.OnInitializedAsync();
+    }
+    async Task OnOpen(ListItem item) {
+        if (item.ListId is not null) {
+            navManager.NavigateTo($"/list/{item.ListId}", true);
+        }
+        else if (item.NoteId is not null) {
+            navManager.NavigateTo($"/note/{item.NoteId}");
+        }
+        else {
+            await dialogs.ShowMessageBox("Error", "Nothing to open");
+        }
+    }
+    async Task<List<ListItem>> GetData() {
+        return db.ListItem
+            .Include(x => x.List)
+            .Include(x => x.Note)
+            .Where(x => x.ParentListId == Id)
+            .ToList();
+    }
+    async Task AddNote() {
+        NewNoteName = "";
+        if (NewNoteMsg is null) return;
+        await NewNoteMsg.ShowAsync();
+        if (string.IsNullOrWhiteSpace(NewNoteName)) {
+            snackbar.Add("Cancelled note creation");
+            return;
+        }
+        var note = new Note {
+            Name = NewNoteName,
+            Body = "",
+        };
+        var listItem = new ListItem {
+            ParentListId = Id,
+            Note = note,
+        };
+        db.ListItem.Add(listItem);
+        var changes = db.SaveChanges();
+        if (changes < 1) {
+            await dialogs.ShowMessageBox("Error", "Failed to create note");
+        }
+        else {
+            snackbar.Add("Note created", Severity.Success);
+        }
+        await grid.Init();
+    }
+    async Task AddList() {
+        NewListName = "";
+        if (NewListMsg is null) return;
+        await NewListMsg.ShowAsync();
+        if (string.IsNullOrWhiteSpace(NewListName)) {
+            snackbar.Add("Cancelled list creation");
+            return;
+        }
+        var list = new List {
+            Name = NewListName,
+        };
+        var listItem = new ListItem {
+            ParentListId = Id,
+            List = list,
+        };
+        db.ListItem.Add(listItem);
+        var changes = db.SaveChanges();
+        if (changes < 1) {
+            await dialogs.ShowMessageBox("Error", "Failed to create list");
+        }
+        else {
+            snackbar.Add("List created", Severity.Success);
+        }
+        await grid.Init();
+    }
+}

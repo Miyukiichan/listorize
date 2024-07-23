@@ -10,7 +10,12 @@
 
 <MudPaper Elevation="25">
     <MudToolBar>
-        <MudIconButton Icon="@Icons.Material.Outlined.Add" OnClick="Add" />
+        @if (Toolbar is not null) {
+            @Toolbar
+        }
+        else {
+            <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Outlined.Add" OnClick="Add">Add</MudButton>
+        }
     </MudToolBar>
 </MudPaper>
 <MudDataGrid T="T" @ref="grid" Items="Items" ReadOnly="false" EditMode="DataGridEditMode.Cell" CommittedItemChanges="@CommittedItemChanges">
@@ -29,6 +34,7 @@
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Toolbar { get; set; }
     [Parameter] public string? NavigationURI { get; set; }
     [Parameter] public Func<T, bool>? Filter { get; set; }
     [Parameter] public EventCallback<T> OnOpen { get; set; }
@@ -39,7 +45,7 @@
 
     MudDataGrid<T>? grid;
     
-    async Task Init() {
+    public async Task Init() {
         if (GetData is not null) {
             Items = await GetData();
         }

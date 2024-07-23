@@ -5,12 +5,14 @@
 @inject IDialogService dialogs
 @inject ISnackbar snackbar
 
-<PageTitle>Note</PageTitle>
+<PageTitle>@Title</PageTitle>
 
 @if (Note is null) {
     <h1>Note not found</h1>
 }
 else {
+    <h1>@Title</h1>
+    <br />
     <MudButton Variant="Variant.Filled" OnClick="Submit">Save</MudButton>
     <br />
     <br />
@@ -24,10 +26,12 @@ else {
     [Parameter] public int Id { get; set; }
     private Note? Note { get; set; }
     string Value { get; set; } = "";
+    string Title = "Note";
     protected override async Task OnInitializedAsync() {
         Note = await db.Note.FindAsync(Id);
         if (Note is not null) {
             Value = Note.Body;
+            Title = $"Note - {Note.Name}";
             StateHasChanged();
         }
         await base.OnInitializedAsync();
