@@ -1,6 +1,6 @@
+using listorize.Components.Util;
 namespace listorize.Model;
-public class Note {
-    public int Id { get; set; }
+public class Note : BaseModel {
     public required string Name { get; set; }
     public required string Body { get; set; }
 

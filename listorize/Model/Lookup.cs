@@ -1,5 +1,5 @@
+using listorize.Components.Util;
 namespace listorize.Model;
-public class Lookup {
-    public int Id { get; set; }
+public class Lookup : BaseModel {
     public required string Name { get; set; }
 }

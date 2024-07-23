@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using listorize.Components.Util;
 namespace listorize.Model;
 
-public class LookupOption {
-    public int Id { get; set; }
+public class LookupOption : BaseModel {
     public required string Name { get; set; }
     [ForeignKey(nameof(LookupOption.Lookup))]
     public int LookupId { get; set; }

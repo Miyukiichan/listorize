@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using listorize.Components.Util;
 namespace listorize.Model;
 
 public enum ColumnType {
@@ -12,8 +13,7 @@ public enum ColumnType {
     LastEditedDateTime,
     Checkbox,
 }
-public class ListColumn {
-    public int Id { get; set; }
+public class ListColumn : BaseModel {
     public required string Name { get; set; }
     public ColumnType ColumnType { get; set; }
     [ForeignKey(nameof(ListColumn.List))]

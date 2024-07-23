@@ -1,0 +1,108 @@
+@using Microsoft.EntityFrameworkCore
+@using Model
+@using System.Linq.Expressions
+@using listorize.Components.Util
+@inject ListorizeContext db
+@inject IDialogService dialogs
+@inject ISnackbar snackbar
+@inject NavigationManager navManager
+@typeparam T where T : BaseModel, new()
+
+<MudPaper Elevation="25">
+    <MudToolBar>
+        <MudIconButton Icon="@Icons.Material.Outlined.Add" OnClick="Add" />
+    </MudToolBar>
+</MudPaper>
+<MudDataGrid T="T" @ref="grid" Items="Items" ReadOnly="false" EditMode="DataGridEditMode.Cell" CommittedItemChanges="@CommittedItemChanges">
+    <Columns>
+        @ChildContent
+        <TemplateColumn Editable="false" CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudStack Row>
+                    <MudIconButton Icon="@Icons.Material.Outlined.OpenInNew" OnClick="() => Open(context.Item)"></MudIconButton>
+                    <MudIconButton Icon="@Icons.Material.Outlined.Delete" OnClick="() => Delete(context.Item)"></MudIconButton>
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? NavigationURI { get; set; }
+    [Parameter] public Func<T, bool>? Filter { get; set; }
+    [Parameter] public EventCallback<T> OnOpen { get; set; }
+    [Parameter] public EventCallback<T> BeforeAdd { get; set; }
+    [Parameter] public Func<Task<List<T>>>? GetData { get; set; }
+
+    List<T> Items = new();
+
+    MudDataGrid<T>? grid;
+    
+    async Task Init() {
+        if (GetData is not null) {
+            Items = await GetData();
+        }
+        else if (Filter is not null)
+            Items = db.Set<T>().Where(Filter).ToList();
+        else
+            Items = await db.Set<T>().ToListAsync();
+    }
+    protected override async Task OnInitializedAsync() {
+        await Init();
+        await base.OnInitializedAsync();
+    }
+    async Task Add() {
+        if (grid is null) return;
+        await grid.SetEditingItemAsync(new T());
+    }
+    async Task CommittedItemChanges(T item)
+    {
+        string error = "Failed to add item";
+        string success = "New item created";
+        var state = db.Entry(item).State;
+        // Checks for added items taht are detached
+        // When the item is updated to include the Id after it is added, it triggers the commit event again
+        // Results in an item that gets added twice and a subsequent error
+        if (state != EntityState.Modified && item.Id != 0) return;
+        if (item.Id != 0) {
+            db.Set<T>().Update(item);
+            error = "Failed to update item";
+            success = "Item updated";
+        }
+        else {
+            if (BeforeAdd.HasDelegate)
+                await BeforeAdd.InvokeAsync(item);
+            db.Set<T>().Add(item);
+        }
+        var changes = db.SaveChanges();
+        if (changes < 1) {
+            await dialogs.ShowMessageBox("Error", error);
+        }
+        else {
+            snackbar.Add(success, Severity.Success);
+        }
+        await Init();
+    }
+    async Task Delete(T item) {
+        db.Set<T>().Remove(item);
+        var changes = db.SaveChanges();
+        if (changes < 1) {
+            await dialogs.ShowMessageBox("Error", "Failed to delete item");
+        }
+        else {
+            snackbar.Add("Item deleted", Severity.Success);
+        }
+        await Init();
+    }
+    async Task Open(T item) {
+        if (OnOpen.HasDelegate) {
+            await OnOpen.InvokeAsync(item);
+            return;
+        }
+        var currentURI = NavigationURI;
+        if (string.IsNullOrWhiteSpace(currentURI))
+            currentURI = navManager.ToBaseRelativePath(navManager.Uri);
+        navManager.NavigateTo($"/{currentURI}/{item.Id}");
+    }
+}    
