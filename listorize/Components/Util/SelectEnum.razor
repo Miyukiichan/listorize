@@ -1,0 +1,35 @@
+@typeparam T
+
+<MudSelect T="T" @bind-Value="Value" Label="@Label">
+    @foreach (T item in GetValues()) {
+        <MudSelectItem Value="@item">@item</MudSelectItem>
+    }
+</MudSelect>
+
+@code {
+    [Parameter] public string Label { get; set; }
+     private T? _value;
+
+    [Parameter]
+    public T? Value
+    {
+        get => _value;
+        set
+        {
+            if (_value is null && value is null) return;
+            if (_value is not null && _value.Equals(value)) return;
+            if (value is not null && value.Equals(_value)) return;
+            _value = value;
+            ValueChanged.InvokeAsync(value);
+        }
+    }
+
+    [Parameter]
+    public EventCallback<T?> ValueChanged { get; set; } 
+
+    Array GetValues() {
+        var underlying = Nullable.GetUnderlyingType(typeof(T));
+        if (underlying is null) return Enum.GetValues(typeof(T));
+        return Enum.GetValues(underlying);
+    }
+}

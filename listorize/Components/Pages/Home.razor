@@ -14,15 +14,26 @@
 <br />
 
 <Grid @ref="grid" T="Item" NavigationURI="list" OnOpen="OnOpen" GetData="GetData">
-    <ChildContent>
-        <PropertyColumn T="Item" TProperty="string" Property="x => x.Name"></PropertyColumn>
-    </ChildContent>
     <Toolbar>
         <MudStack Row>
             <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Outlined.Add" OnClick="AddNote">Note</MudButton>
             <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Outlined.Add" OnClick="AddList">List</MudButton>
+            <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Outlined.ModeEdit" OnClick="EditColumns">Columns</MudButton>
         </MudStack>
     </Toolbar>
+    <ChildContent>
+        <PropertyColumn T="Item" TProperty="string" Property="x => x.Name"></PropertyColumn>
+        @foreach (var column in Columns) {
+            <TemplateColumn T="Item" TProperty="string" Title="@column.Name">
+                <CellTemplate>
+                    @context.Item.ItemValues.First(x => x.ItemColumnId == column.Id).Value
+                </CellTemplate>
+                <EditTemplate>
+                    <MudTextField Label="@column.Name" T="string" @bind-Value="context.Item.ItemValues.First(x => x.ItemColumnId == column.Id).Value"></MudTextField>
+                </EditTemplate>
+            </TemplateColumn>
+        }
+    </ChildContent>
 </Grid>
 
 <MudMessageBox @ref="NewNoteMsg" Title="New Note">
@@ -37,16 +48,33 @@
     </MessageContent>
 </MudMessageBox>
 
+<MudMessageBox Title="Columns" @ref="ColumnsMsg">
+    <MessageContent>
+        <Grid T="ItemColumn" GetData="GetColumns" BeforeAdd="BeforeAddColumn" AfterSave="AfterSaveColumn" AllowOpen="false">
+            <PropertyColumn T="ItemColumn" TProperty="string" Property="x => x.Name"></PropertyColumn>
+            <PropertyColumn T="ItemColumn" TProperty="ColumnType?" Property="x => x.ColumnType">
+                <EditTemplate>
+                    <SelectEnum T="ColumnType?" @bind-Value="context.Item.ColumnType"></SelectEnum>
+                </EditTemplate>
+            </PropertyColumn>
+        </Grid>
+    </MessageContent>
+</MudMessageBox>
+
 @code {
     [Parameter] public int? Id { get; set; }
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; }
     string NewNoteName = "";
     MudMessageBox? NewNoteMsg;
     string NewListName = "";
     MudMessageBox? NewListMsg;
+    MudMessageBox? ColumnsMsg;
     Grid<Item>? grid;
     Item? Item;
     string Title = "Home";
+    List<ItemColumn> Columns = new();
     protected override async Task OnInitializedAsync() {
+        Columns = await GetColumns();
         if (Id is not null) {
             Item = db.Items.FirstOrDefault(x => x.Id == Id);
             if (Item is not null) {
@@ -65,9 +93,19 @@
     }
     async Task<List<Item>> GetData() {
         return db.Items
-            .Include(x => x.Note)
+            .Include(x => x.ItemValues)
             .Where(x => x.ParentItemId == Id)
             .ToList();
+    }
+    async Task BeforeAdd(Item item) {
+        item.ItemValues = new List<ItemValue>();
+        foreach (var column in Columns) {
+            item.ItemValues.Add(new ItemValue {
+                Item = item,
+                ItemColumnId = column.Id,
+                Value = "",
+            });
+        }
     }
     async Task AddNote() {
         NewNoteName = "";
@@ -85,6 +123,7 @@
             ParentItemId = Id,
             Note = note,
         };
+        await BeforeAdd(item);
         db.Items.Add(item);
         var changes = db.SaveChanges();
         if (changes < 1) {
@@ -107,6 +146,7 @@
             Name = NewListName,
             ParentItemId = Id,
         };
+        await BeforeAdd(item);
         db.Items.Add(item);
         var changes = db.SaveChanges();
         if (changes < 1) {
@@ -116,5 +156,34 @@
             snackbar.Add("List created", Severity.Success);
         }
         await OnOpen(item);
+    }
+    async Task EditColumns() {
+        await ColumnsMsg.ShowAsync(options: new DialogOptions {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+        });
+    }
+    async Task<List<ItemColumn>> GetColumns() {
+        return db.ItemColumns
+            .Include(x => x.Lookup)
+            .Where(x => x.ItemId == Id)
+            .ToList();
+    }
+    async Task BeforeAddColumn(ItemColumn column) {
+        column.ItemId = Id;
+        column.ItemValues = new List<ItemValue>();
+        foreach (var item in grid.Items) {
+            column.ItemValues.Add(new ItemValue {
+                ItemId = item.Id,
+                ItemColumn = column,
+                Value = "",
+            });
+        }
+    }
+    async Task AfterSaveColumn(ItemColumn column) {
+        Columns = await GetColumns();
+        // For now, just refresh the page since when a column is added, it goes to the end after the command buttons
+        // Refreshing fixes the column ordering
+        navManager.NavigateTo(navManager.Uri, true);
     }
 }

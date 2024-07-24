@@ -15,4 +15,5 @@ public class Item : BaseModel {
     public Item? ParentItem { get; set; }
     public Note? Note { get; set; }
     public Item? ChildItem { get; set; }
+    public virtual List<ItemValue> ItemValues { get; set; }
 }

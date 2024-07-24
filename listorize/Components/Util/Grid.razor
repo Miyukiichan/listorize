@@ -18,13 +18,16 @@
         }
     </MudToolBar>
 </MudPaper>
-<MudDataGrid T="T" @ref="grid" Items="Items" ReadOnly="false" EditMode="DataGridEditMode.Cell" CommittedItemChanges="@CommittedItemChanges">
+<MudDataGrid T="T" @ref="grid" Items="Items" ReadOnly="false" EditMode="DataGridEditMode.Form" CommittedItemChanges="@CommittedItemChanges">
     <Columns>
         @ChildContent
         <TemplateColumn Editable="false" CellClass="d-flex justify-end">
             <CellTemplate>
                 <MudStack Row>
-                    <MudIconButton Icon="@Icons.Material.Outlined.OpenInNew" OnClick="() => Open(context.Item)"></MudIconButton>
+                    <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" OnClick="@context.Actions.StartEditingItemAsync" />
+                    @if (AllowOpen) {
+                        <MudIconButton Icon="@Icons.Material.Outlined.OpenInNew" OnClick="() => Open(context.Item)"></MudIconButton>
+                    }
                     <MudIconButton Icon="@Icons.Material.Outlined.Delete" OnClick="() => Delete(context.Item)"></MudIconButton>
                 </MudStack>
             </CellTemplate>
@@ -39,11 +42,13 @@
     [Parameter] public Func<T, bool>? Filter { get; set; }
     [Parameter] public EventCallback<T> OnOpen { get; set; }
     [Parameter] public EventCallback<T> BeforeAdd { get; set; }
+    [Parameter] public EventCallback<T> AfterSave { get; set; }
     [Parameter] public Func<Task<List<T>>>? GetData { get; set; }
+    [Parameter] public bool AllowOpen { get; set; } = true;
 
-    List<T> Items = new();
+    public List<T> Items = new();
 
-    MudDataGrid<T>? grid;
+    public MudDataGrid<T>? grid;
     
     public async Task Init() {
         if (GetData is not null) {
@@ -66,11 +71,12 @@
     {
         string error = "Failed to add item";
         string success = "New item created";
+        var entry = db.Entry(item);
         var state = db.Entry(item).State;
         // Checks for added items taht are detached
         // When the item is updated to include the Id after it is added, it triggers the commit event again
         // Results in an item that gets added twice and a subsequent error
-        if (state != EntityState.Modified && item.Id != 0) return;
+        if (state == EntityState.Detached && item.Id != 0) return;
         if (item.Id != 0) {
             db.Set<T>().Update(item);
             error = "Failed to update item";
@@ -86,6 +92,8 @@
             await dialogs.ShowMessageBox("Error", error);
         }
         else {
+            if (AfterSave.HasDelegate)
+                await AfterSave.InvokeAsync(item);
             snackbar.Add(success, Severity.Success);
         }
         await Init();
@@ -97,6 +105,8 @@
             await dialogs.ShowMessageBox("Error", "Failed to delete item");
         }
         else {
+            if (AfterSave.HasDelegate)
+                await AfterSave.InvokeAsync(item);
             snackbar.Add("Item deleted", Severity.Success);
         }
         await Init();
