@@ -1,4 +1,5 @@
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.EntityFrameworkCore.ChangeTracking
 @using Model
 @using System.Linq.Expressions
 @using listorize.Components.Util
@@ -42,6 +43,7 @@
     [Parameter] public Func<T, bool>? Filter { get; set; }
     [Parameter] public EventCallback<T> OnOpen { get; set; }
     [Parameter] public EventCallback<T> BeforeAdd { get; set; }
+    [Parameter] public EventCallback<T> BeforeUpdate { get; set; }
     [Parameter] public EventCallback<T> AfterSave { get; set; }
     [Parameter] public Func<Task<List<T>>>? GetData { get; set; }
     [Parameter] public bool AllowOpen { get; set; } = true;
@@ -51,6 +53,7 @@
     public MudDataGrid<T>? grid;
     
     public async Task Init() {
+        db.ChangeTracker.Clear();
         if (GetData is not null) {
             Items = await GetData();
         }
@@ -72,12 +75,14 @@
         string error = "Failed to add item";
         string success = "New item created";
         var entry = db.Entry(item);
-        var state = db.Entry(item).State;
-        // Checks for added items taht are detached
+        var state = entry.State;
+        // Checks for added items that are detached
         // When the item is updated to include the Id after it is added, it triggers the commit event again
         // Results in an item that gets added twice and a subsequent error
         if (state == EntityState.Detached && item.Id != 0) return;
         if (item.Id != 0) {
+            if (BeforeUpdate.HasDelegate)
+                await BeforeUpdate.InvokeAsync(item);
             db.Set<T>().Update(item);
             error = "Failed to update item";
             success = "Item updated";

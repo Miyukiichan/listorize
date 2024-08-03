@@ -27,7 +27,7 @@ if (!File.Exists(configPath)) {
     catch {}
 }
 
-builder.Configuration.AddJsonFile(configPath    ,
+builder.Configuration.AddJsonFile(configPath,
         optional: true,
         reloadOnChange: true);
 

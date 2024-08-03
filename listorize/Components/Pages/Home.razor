@@ -1,8 +1,10 @@
 @page "/"
 @page "/list/{id:int}"
+@using Microsoft.EntityFrameworkCore.ChangeTracking
 @using listorize.Components.Util
 @using Microsoft.EntityFrameworkCore
 @using Model
+@using MudExtensions
 @inject NavigationManager navManager
 @inject IDialogService dialogs
 @inject ListorizeContext db
@@ -13,7 +15,7 @@
 <h1>@Title</h1>
 <br />
 
-<Grid @ref="grid" T="Item" NavigationURI="list" OnOpen="OnOpen" GetData="GetData">
+<Grid @ref="grid" T="Item" NavigationURI="list" OnOpen="OnOpen" GetData="GetData" BeforeUpdate="BeforeUpdate">
     <Toolbar>
         <MudStack Row>
             <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Outlined.Add" OnClick="AddNote">Note</MudButton>
@@ -26,10 +28,57 @@
         @foreach (var column in Columns) {
             <TemplateColumn T="Item" TProperty="string" Title="@column.Name">
                 <CellTemplate>
-                    @context.Item.ItemValues.First(x => x.ItemColumnId == column.Id).Value
+                    @{
+                        var item = context.Item.ItemValues.FirstOrDefault(x => x.ItemColumnId == column.Id);
+                        if (item is null) {
+
+                        }
+                        else if (column.ColumnType == ColumnType.CreatedDateTime) {
+                            <MudDateWheelPicker Disabled="true" @bind-Value="context.Item.CreatedDateTime"></MudDateWheelPicker>
+                        }
+                        else if (column.ColumnType == ColumnType.LastEditedDateTime) {
+                            <MudDateWheelPicker Disabled="true" @bind-Value="context.Item.LastEditedDateTime"></MudDateWheelPicker>
+                        }
+                        else if (column.ColumnType == ColumnType.Date) {
+                            <MudDateWheelPicker Disabled="true" Value="@GetDate(item.Value)"></MudDateWheelPicker>
+                        }
+                        else if (column.ColumnType == ColumnType.DateTime) {
+                            <MudDateWheelPicker DateView="DateView.Both" Disabled="true" Value="@GetDate(item.Value)"></MudDateWheelPicker>
+                        }
+                        else if (column.ColumnType == ColumnType.Checkbox) {
+                            <MudCheckBox Disabled="true" @bind-Value="item.Value"></MudCheckBox>
+                        }
+                        else {
+                            @item.Value
+                        }
+                    }
                 </CellTemplate>
                 <EditTemplate>
-                    <MudTextField Label="@column.Name" T="string" @bind-Value="context.Item.ItemValues.First(x => x.ItemColumnId == column.Id).Value"></MudTextField>
+                    @{
+                        var item = context.Item.ItemValues.First(x => x.ItemColumnId == column.Id);
+                        if (column.ColumnType == ColumnType.Text) {
+                            <MudTextField Label="@column.Name" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="item.Value"></MudTextField>
+                        }
+                        else if (column.ColumnType == ColumnType.Number) {
+                            <MudNumericField Variant="Variant.Outlined" HideSpinButtons="true" Label="@column.Name" Margin="Margin.Dense" @bind-Value="item.Value"></MudNumericField>
+                        }
+                        else if (column.ColumnType == ColumnType.CreatedDateTime) {
+                            <MudDateWheelPicker Disabled="true" Label="@column.Name" @bind-Value="context.Item.CreatedDateTime"></MudDateWheelPicker>
+                        }
+                        else if (column.ColumnType == ColumnType.LastEditedDateTime) {
+                            <MudDateWheelPicker Disabled="true" Label="@column.Name" @bind-Value="context.Item.LastEditedDateTime"></MudDateWheelPicker>
+                        }
+                        else if (column.ColumnType == ColumnType.Date) {
+                            <MudDateWheelPicker ShowHeader="true" ShowToolbar="true" Editable="true" Label="@column.Name" Value="@GetDate(item.Value)" ValueChanged="@((DateTime? d) => DateValueChanged(item, d))"></MudDateWheelPicker>
+                        }
+                        else if (column.ColumnType == ColumnType.DateTime) {
+                            <MudDateWheelPicker DateView="DateView.Both" ShowHeader="true" ShowToolbar="true" Editable="true" Label="@column.Name" Value="@GetDate(item.Value)" ValueChanged="@((DateTime? d) => DateValueChanged(item, d))"></MudDateWheelPicker>
+                        }
+                        else if (column.ColumnType == ColumnType.Checkbox) {
+                            <MudCheckBox Label="@column.Name" @bind-Value="item.Value"></MudCheckBox>
+                        }
+                    }
+                    
                 </EditTemplate>
             </TemplateColumn>
         }
@@ -54,7 +103,7 @@
             <PropertyColumn T="ItemColumn" TProperty="string" Property="x => x.Name"></PropertyColumn>
             <PropertyColumn T="ItemColumn" TProperty="ColumnType?" Property="x => x.ColumnType">
                 <EditTemplate>
-                    <SelectEnum T="ColumnType?" @bind-Value="context.Item.ColumnType"></SelectEnum>
+                    <SelectEnum Label="Column Type" T="ColumnType?" @bind-Value="context.Item.ColumnType"></SelectEnum>
                 </EditTemplate>
             </PropertyColumn>
         </Grid>
@@ -89,6 +138,14 @@
         }
         else {
             navManager.NavigateTo($"/list/{item.Id}", true);
+        }
+    }
+    DateTime? GetDate(string d) {
+        try {
+            return DateTime.Parse(d);
+        }
+        catch {
+            return null;
         }
     }
     async Task<List<Item>> GetData() {
@@ -157,6 +214,9 @@
         }
         await OnOpen(item);
     }
+    void BeforeUpdate(Item item) {
+        item.LastEditedDateTime = DateTime.Now;
+    }
     async Task EditColumns() {
         await ColumnsMsg.ShowAsync(options: new DialogOptions {
             MaxWidth = MaxWidth.Medium,
@@ -185,5 +245,9 @@
         // For now, just refresh the page since when a column is added, it goes to the end after the command buttons
         // Refreshing fixes the column ordering
         navManager.NavigateTo(navManager.Uri, true);
+    }
+
+    void DateValueChanged(ItemValue itemValue, DateTime? value) {
+        itemValue.Value = new string(value.ToString());
     }
 }
