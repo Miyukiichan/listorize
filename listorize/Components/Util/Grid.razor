@@ -19,7 +19,7 @@
         }
     </MudToolBar>
 </MudPaper>
-<MudDataGrid T="T" @ref="grid" Items="Items" ReadOnly="false" EditMode="DataGridEditMode.Form" CommittedItemChanges="@CommittedItemChanges">
+<MudDataGrid EditDialogOptions="new DialogOptions {FullWidth = true, MaxWidth = MaxWidth.Large}" T="T" @ref="grid" Items="Items" ReadOnly="false" EditMode="DataGridEditMode.Form" CommittedItemChanges="@CommittedItemChanges">
     <Columns>
         @ChildContent
         <TemplateColumn Editable="false" CellClass="d-flex justify-end">

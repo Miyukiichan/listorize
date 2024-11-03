@@ -97,7 +97,7 @@
     </MessageContent>
 </MudMessageBox>
 
-<MudMessageBox Title="Columns" @ref="ColumnsMsg">
+<MudMessageBox Title="@($"Columns - {Title}")" @ref="ColumnsMsg">
     <MessageContent>
         <Grid T="ItemColumn" GetData="GetColumns" BeforeAdd="BeforeAddColumn" AfterSave="AfterSaveColumn" AllowOpen="false">
             <PropertyColumn T="ItemColumn" TProperty="string" Property="x => x.Name"></PropertyColumn>

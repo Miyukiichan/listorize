@@ -3,7 +3,7 @@
 ## Todo
 
 - Export and maybe import to/from notion
-- Make editing dialog bigger
+- Text area or long string datatype
 - Dynamic columns and values
   - Lookup editing
   - Show this on the note maybe?
